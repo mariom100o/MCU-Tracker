@@ -32,6 +32,19 @@ const userRatingSchema = new Schema(
 );
 const userRating = mongoose.model("userRating", userRatingSchema);
 
+// User Watched Status Schema
+const userWatchedListSchema = new Schema(
+    {
+        userId: Number,
+        watchedList: Array,
+    },
+    { collection: "userWatchedList" }
+);
+const userWatchedList = mongoose.model(
+    "userWatchedList",
+    userWatchedListSchema
+);
+
 // Allow CORS for all origins
 app.use(
     cors({
@@ -117,6 +130,65 @@ app.post("/personal-ratings", async function (req, res) {
         docs.ratings = newRatings;
         docs.save();
     });
+
+    res.sendStatus(200);
+});
+
+// Retrieves a list users watched tit;es
+app.get("/status", function (req, res) {
+    let userId = req.query.userId;
+    // Remove later
+    if (userId == "null") userId = "0";
+    console.log(
+        "Got a GET request for MCU watched list from %s for userId %s",
+        req.socket.remoteAddress,
+        userId
+    );
+
+    userWatchedList.findOne({ userId: userId }, function (err, docs) {
+        if (!docs) {
+            let watchedList = { userId: userId, watchedList: [] };
+            userWatchedList.create(watchedList);
+            res.json({});
+        } else {
+            res.json(docs.watchedList);
+        }
+    });
+});
+
+app.post("/status", async function (req, res) {
+    let userId = req.body.userId;
+    let title = req.body.title;
+    let opt = req.body.opt;
+
+    // Remove later
+    if (!userId) userId = "0";
+
+    console.log(
+        "Got a POST request to %s title %i from user %s from %s",
+        opt,
+        title,
+        userId,
+        req.socket.remoteAddress
+    );
+
+    userWatchedList.findOne({ userId: userId }, function (err, docs) {
+        // TODO: Use SET to not have to download->clone->update->upload
+        let newWatchedList = [...docs.watchedList];
+        if (opt == "add" && !newWatchedList.includes(title)) {
+            newWatchedList.push(title);
+        }
+        if (opt == "remove") {
+            const index = newWatchedList.indexOf(title);
+            if (index > -1) {
+                newWatchedList.splice(index, 1);
+            }
+        }
+        docs.watchedList = newWatchedList;
+        docs.save();
+    });
+
+    res.sendStatus(200);
 });
 
 // Start the server
