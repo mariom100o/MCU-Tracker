@@ -16,7 +16,7 @@ function getPersonalRatings(id) {
         })
         .then(function (json) {
             ratings = { ...ratings, ...json };
-            for (let i = 1; i <= Object.keys(json).length; i++) {
+            for (let i = 1; i <= count; i++) {
                 fillStar(i, ratings[i]);
             }
         });
