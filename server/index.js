@@ -66,10 +66,10 @@ db.once("open", function () {
 });
 
 // Responds with the index page - WILL REMOVE
-app.get("/", function (req, res) {
-    console.log("Got a GET request for the homepage");
-    res.sendFile(path.join(__dirname, "../index.html"));
-});
+// app.get("/", function (req, res) {
+//     console.log("Got a GET request for the homepage");
+//     res.sendFile(path.join(__dirname, "../index.html"));
+// });
 
 // Retrieves a list of all MCU movies/shows
 app.get("/titles", function (req, res) {
@@ -126,7 +126,12 @@ app.post("/personal-ratings", async function (req, res) {
     userRating.findOne({ userId: userId }, function (err, docs) {
         // TODO: Use SET to not have to download->clone->update->upload
         let newRatings = { ...docs.ratings };
-        newRatings[title] = rating;
+        if (rating != 0) {
+            newRatings[title] = rating;
+        } else {
+            delete newRatings[title];
+        }
+
         docs.ratings = newRatings;
         docs.save();
     });
@@ -192,7 +197,8 @@ app.post("/status", async function (req, res) {
 });
 
 // Start the server
-var server = app.listen(3000, "0.0.0.0", function () {
+let port = process.env.PORT || 3000;
+var server = app.listen(port, "0.0.0.0", function () {
     var host = server.address().address;
     var port = server.address().port;
     console.log("MCU Tracker Backend listening at http://%s:%s", host, port);

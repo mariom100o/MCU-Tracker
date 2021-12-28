@@ -78,15 +78,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal"
-                        >
-                            Close
+                        <button type="button" class="btn btn-danger" id="unwatchBtn">
+                            Unwatch
                         </button>
-                        <button type="button" class="btn btn-primary">
-                            Save changes
+                        <button type="button" class="btn btn-primary"  id="doneBtn" data-bs-dismiss="modal">
+                            Done
                         </button>
                     </div>
                 </div>
@@ -101,6 +97,9 @@
         ></script>
         <script type="text/javascript" src="js/star.js"></script>
         <script>
+            let totalWatched = 0;
+            let totalRuntime = 0;
+
             function formatRuntime(runtime) {
                 let hours = Math.floor(runtime / 60).toString() + "h";
                 let minutes =
@@ -120,16 +119,56 @@
                 starDiv.innerHTML = 
                            '<i class="fa fa-star-o" id="modal-star1"></i><i class="fa fa-star-o" id="modal-star2"></i><i class="fa fa-star-o" id="modal-star3"></i><i class="fa fa-star-o" id="modal-star4"></i><i class="fa fa-star-o" id="modal-star5"></i>'
                 modalStarEvent(number);
-
+                let unwatchBtn = document.getElementById("unwatchBtn")
+                if (document.getElementById("row"+number).className == "align-middle table-success")
+                    unwatchBtn.outerHTML='<button type="button" class="btn btn-danger" id="unwatchBtn" onclick="setStatus('+number+', \'remove\', '+runtime+')" data-bs-dismiss="modal">Unwatch</button>'
+                else
+                    unwatchBtn.outerHTML='<button type="button" class="btn btn-danger" id="unwatchBtn" onclick="setStatus('+number+', \'remove\', '+runtime+')" data-bs-dismiss="modal">Cancel</button>'
+                    
+                document.getElementById("doneBtn").outerHTML='<button type="button" class="btn btn-primary"  id="doneBtn" onclick="setStatus('+number+', \'add\', '+runtime+')" data-bs-dismiss="modal">Done</button>'
             }
 
-            fetch("http://192.168.0.30:3000/titles")
+            function setStatus(title, opt, runtime){
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "https://mcu-trackr.herokuapp.com/status", true);
+
+                // Send the proper header information along with the request
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+
+                xhr.onreadystatechange = function () {
+                    // Call a function when the state changes.
+                    if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+                        let row = document.getElementById("row"+title);
+                        let editBtn = document.getElementById("edit-btn"+title)
+                        if (opt == 'add'){
+                            row.className = "align-middle table-success";
+                            editBtn.innerHTML = "<i class='fa fa-edit'></i> Edit"
+                            totalWatched+=runtime;
+                            let percentWatched = (100*(totalWatched/totalRuntime)).toFixed(1);
+                            document.getElementById("time-left").innerHTML = formatRuntime(totalRuntime - totalWatched) + " Remaining";
+                            document.getElementById("progress-bar").outerHTML = '<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: ' + percentWatched + '%;" aria-valuenow="' + totalWatched + ' aria-valuemin="0" aria-valuemax="' + totalWatched + '">' + percentWatched + '%</div>';
+                        } else {
+                            row.className = "align-middle";
+                            editBtn.innerHTML = "<i class='far fa-check-square'></i> Seen"
+                            totalWatched-=runtime;
+                            let percentWatched = (100*(totalWatched/totalRuntime)).toFixed(1);
+                            document.getElementById("time-left").innerHTML = formatRuntime(totalRuntime - totalWatched) + " Remaining";
+                            document.getElementById("progress-bar").outerHTML = '<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: ' + percentWatched + '%;" aria-valuenow="' + totalWatched + ' aria-valuemin="0" aria-valuemax="' + totalWatched + '">' + percentWatched + '%</div>';
+                            setRating(title, 0)
+                        }
+                    }
+                };
+                let data = { userId: userId, title: title, opt: opt };
+                xhr.send(JSON.stringify(data));
+            }
+
+            fetch("https://mcu-trackr.herokuapp.com/titles")
                 .then(function (res) {
                     return res.json();
                 })
                 .then(async function (json) {
                     watchedList = await fetch(
-                        "http://192.168.0.30:3000/status?userId=" + userId
+                        "https://mcu-trackr.herokuapp.com/status?userId=" + userId
                     );
                     watchedListJson = await watchedList.json();
                     return [watchedListJson, json];
@@ -138,8 +177,6 @@
                     let table = document.getElementById("title-table-body");
                     let watchedList = responses[0];
                     let json = responses[1];
-                    let totalWatched = 0;
-                    let totalRuntime = 0;
                     for (let i = 0; i < json.length; i++) {
                         let number = json[i].number.toString();
                         let title = json[i].title;
@@ -150,11 +187,12 @@
 
                         totalRuntime += parseInt(runtime);
                         let row = table.insertRow(parseInt(number, 10) - 1);
-                        if (watchedList.includes(number)){
+                        row.id = "row" + number;
+                        if (watchedList.includes(parseInt(number))){
                             totalWatched += parseInt(runtime);
-                            row.className = "table-success";
+                            row.className = "align-middle table-success";
                         } else {
-                            row.className = "" + " align-middle";
+                            row.className = "align-middle";
                         }
                         // row.className =
                         //     (watchedList.includes(number)
@@ -188,8 +226,8 @@
                         row.insertCell(5).appendChild(buttonElement);
                         // number, title, year, runtime, link, poster
                         buttonElement.outerHTML =
-                            '<button type="button" class="btn btn-outline-dark btn-sm " style="min-width:65px;" onclick="openEditModal(\'' + number +'\', \''+ title +'\', \''+ year +'\', \''+ runtime +'\', \''+ link +'\', \''+ poster +'\')" data-bs-toggle="modal" data-bs-target="#exampleModal">' +
-                            (watchedList.includes(number)
+                            '<button type="button" class="btn btn-outline-dark btn-sm" id="edit-btn'+number+'" style="min-width:65px;" onclick="openEditModal(\'' + number +'\', \''+ title +'\', \''+ year +'\', \''+ runtime +'\', \''+ link +'\', \''+ poster +'\')" data-bs-toggle="modal" data-bs-target="#exampleModal">' +
+                            (watchedList.includes(parseInt(number))
                                 ? "<i class='fa fa-edit'></i> Edit"
                                 : "<i class='far fa-check-square'></i> Seen") +
                             "</button>";

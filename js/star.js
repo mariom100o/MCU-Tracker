@@ -10,7 +10,7 @@ function getPersonalRatings(id) {
     count = document.getElementById("title-table-body").childElementCount;
     for (var i = 1; i <= count; i++) ratings[i] = 0;
 
-    fetch("http://192.168.0.30:3000/personal-ratings?userId=" + id)
+    fetch("https://mcu-trackr.herokuapp.com/personal-ratings?userId=" + id)
         .then(function (res) {
             return res.json();
         })
@@ -28,9 +28,9 @@ function setRating(title, val) {
     if (ratings[title] == val) return;
 
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://192.168.0.30:3000/personal-ratings", true);
+    xhr.open("POST", "https://mcu-trackr.herokuapp.com/personal-ratings", true);
 
-    //Send the proper header information along with the request
+    // Send the proper header information along with the request
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 
     xhr.onreadystatechange = function () {
@@ -125,7 +125,7 @@ function modalSetRating(title, val) {
     if (ratings[title] == val) return;
 
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://192.168.0.30:3000/personal-ratings", true);
+    xhr.open("POST", "https://mcu-trackr.herokuapp.com/personal-ratings", true);
 
     //Send the proper header information along with the request
     xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
